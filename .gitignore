@@ -1,2 +1,4 @@
 Data/PLY/*.ply
 *.DS_Store
+build/*
+dependancies/*
