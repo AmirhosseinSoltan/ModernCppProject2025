@@ -1,6 +1,6 @@
 # ModernCppProject2025
 
-## Modern C++ Coursework and Project
+## Modern C++ Project
 
 This repository contains and a modern C++ projec that builds a 3D occupancy grid map from LiDAR point clouds using a 3D Bresenham ray casting algorithm and visualizes results with Open3D.
 
