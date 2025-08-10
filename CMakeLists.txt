@@ -1,37 +1,26 @@
-cmake_minimum_required(VERSION 3.14)
-project(OccupancyMapping)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.31)
+project(occupancy_mapper LANGUAGES CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Enable folders in IDEs like VS Code 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-
-# Open3D configuration - add Open3D as a subdirectory
-# add_subdirectory(${CMAKE_SOURCE_DIR}/dependancies/Open3D)
-# Incorporates a subdirectory containing a CMakeLists.txt into the build process, treating it as part of the project.
-
-set(Open3D_DIR "${CMAKE_SOURCE_DIR}/dependancies/Open3D/build")
+# Open3D configuration
+set(Open3D_DIR "${CMAKE_SOURCE_DIR}/dependancies/open3d-install/lib/cmake/Open3D")
 find_package(Open3D REQUIRED)
 
 # Create the main executable
-add_executable(occupancy_mapper
-    src/main.cpp
-)
+add_executable(occupancy_mapper)
 
-message("CMAKE_SOURCE_DIR is: ${CMAKE_SOURCE_DIR}")
-# CMAKE_SOURCE_DIR : /Users/amir/Desktop/class/4th Semester/ModernC++/project
-# Include directories
-target_include_directories(occupancy_mapper
-    PRIVATE
-    ${CMAKE_SOURCE_DIR}/dependancies/eigen-master
-    ${Open3D_INCLUDE_DIRS}
-    include
-)
+target_sources(occupancy_mapper PRIVATE 
+                                        src/main.cpp 
+                                        src/dataloader.cpp
+                                        # src/transformer.cpp
+                                        src/bresenham.cpp)
 
-# Link dependencies
-target_link_libraries(occupancy_mapper
-    PRIVATE
-    Open3D::Open3D
-)
+target_include_directories(occupancy_mapper PRIVATE include/ ${CMAKE_SOURCE_DIR}/dependancies/eigen-master)
+
+target_link_libraries(occupancy_mapper PRIVATE Open3D::Open3D)
