@@ -11,12 +11,13 @@
 using namespace std;
 using clock_ = std::chrono::steady_clock;
 using Vector3dVector = vector<Eigen::Vector3d>;
+using Vector3d = Eigen::Vector3d;
 using PoseAndCloud = pair<Eigen::Matrix4d,Vector3dVector>;
 
 
 int main() {
 
-    cout << " LOADING THE DATA ..." << endl;
+    cout << "LOADING THE DATA ..." << endl;
     const string dataset_dir = "/Users/amir/Desktop/class/4th_Semester/ModernC++/project/data/";
     dataloader::Dataset dataset(dataset_dir); 
     cout << "Dataset size: " << dataset.size() << endl;
@@ -24,57 +25,50 @@ int main() {
     cout << " -------------------------------- " << endl;
     cout << "TRANSFORMING THE SCAN POINTS AND CREATING 3D OCCUPANCY GRID MAP USING BRESENHAM ALGORITHM." << endl;
     cout << "Please BE PATIENT! THIS WILL TAKE SOME TIME .... !" << endl;
-    // auto [pose, cloud_sensor_frame] = dataset[6000];
-    // cout << "Pose: " << endl;
-    // cout << pose << endl;
-    // cout << "Cloud size: " << cloud_sensor_frame.size() << endl; 
-    // cout << " -------------------------------- " << endl;
 
     const auto process_start = clock_::now();
 
     size_t scans_processed = 0;  // std::size_t an alias for unsigned long or unsigned long long
-    double accumulated_scan_ms = 0.0;
+    double accumulated_scan_s = 0.0;
 
-    OccupancyGrid3D grid(0.1);
+    float VoxelSize = 0.8;
 
-    // for (size_t i = 0; i < dataset.size(); ++i){
-    for (size_t i = 0; i < 300; ++i){
+    OccupancyGrid3D grid(VoxelSize);
+
+    int num_scans = dataset.size();
+    for (size_t i = 0; i < num_scans; ++i){
         const auto& [pose, cloud_sensor] = dataset[i];
-
-        auto now = clock_::now();
-        auto elapsed = chrono::duration_cast<chrono::minutes>(now - process_start).count();
-        cout << "TIME SPENT : " << elapsed << " minutes" << endl;
 
         const auto scan_start = clock_::now();
 
-        Eigen::Vector3d origin = pose.block<3,1>(0,3); // capturing the translation vector as the origin point
+        Vector3d origin = pose.block<3,1>(0,3); // capturing the translation vector as the origin point
 
-        // Vector3dVector cloud_world;
-        // cloud_world.reserve(cloud_sensor.size());
-
-        auto transform_and_cast = [&](const Eigen::Vector3d& point_s) {
+        auto transform_and_cast = [&](const Vector3d& point_s) {
             Eigen::Vector4d hom(point_s.x(), point_s.y(), point_s.z(), 1.0);
-            Eigen::Vector3d point_w = (pose * hom).head<3>();
+            Vector3d point_w = (pose * hom).head<3>();
             grid.insertRay(origin, point_w);
         };
 
+        // Note: we could use std::execution::par here to run in parallel. But macOS libc++ doesn't support 
         std::for_each(cloud_sensor.begin(), cloud_sensor.end(), transform_and_cast);
 
         const auto scan_end = clock_::now();
 
-        const double scan_ms = chrono::duration<double, milli>(scan_end - scan_start).count();
-        accumulated_scan_ms += scan_ms;
+        const double scan_s = chrono::duration<double>(scan_end - scan_start).count();
+
+        std::cout << " Scan " << (i + 1) << "/" << num_scans << "   |  " << scan_s << " s " << std::endl;
+
+        accumulated_scan_s += scan_s;
         ++scans_processed;
-        cout << "Scan " << i << " process time: " << scan_ms << " ms" << endl;
 
     }
-
+    
     const auto process_end = clock_::now();
     const double total_process_minutes = chrono::duration_cast<chrono::duration<double>>(process_end - process_start).count() / 60.0;
-
+    
     cout << "--------------------------------" << endl;
     cout << "Scans processed: " << scans_processed << endl;
-    cout << "Average per-scan process time: " << (accumulated_scan_ms / scans_processed) << " ms" << endl;
+    cout << "Average per-scan process time: " << (accumulated_scan_s / scans_processed) << " s" << endl;
     cout << "Total process time : " << total_process_minutes << " minutes!" << endl;
     cout << "--------------------------------" << endl;
 
