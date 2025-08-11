@@ -120,7 +120,7 @@ The program prints per-scan timings and opens an Open3D visualization window of 
 
 - **Occupancy representation and updates (probabilistic)**
   - The map is an `unordered_map<VoxelKey,double>` storing log-odds values, hashed via large prime multipliers.
-  - Define $\operatorname{logit}(p) = \ln\left(\frac{p}{1-p}\right)$ and probability from log-odds as $p = 1 - \frac{1}{1 + \exp(l)}$.
+  - Define $\logit(p) = \ln\left(\frac{p}{1-p}\right)$ and probability from log-odds as $p = 1 - \frac{1}{1 + \exp(l)}$.
   <!-- - Per update: $l_{\text{voxel}} \leftarrow l_{\text{voxel}} + \Delta$, where $\Delta_{\text{free}} = \operatorname{logit}(P_{\text{FREE}}) - \operatorname{logit}(0.5)$ for intermediate voxels and $\Delta_{\text{occ}} = \operatorname{logit}(P_{\text{OCCUPIED}}) - \operatorname{logit}(0.5)$ for terminal voxels. 
    -->
   -**Bayesian Update Rule:**
@@ -130,9 +130,9 @@ The program prints per-scan timings and opens an Open3D visualization window of 
   - $p_{\text{prior}}$: Prior probability before any measurements (often $0.5$, representing "unknown")
 
   The **log-odds update** formula is:
-  $
+  $$
   L_t = L_{t-1} + \left[ \log\left(\frac{p(z_t)}{1 - p(z_t)}\right) - \log\left(\frac{p_{\text{prior}}}{1 - p_{\text{prior}}}\right) \right]
-  $
+  $$
 
   Where:
   - $L_t$: Updated log-odds after observation
