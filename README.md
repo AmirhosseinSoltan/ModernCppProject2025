@@ -1,19 +1,30 @@
 # ModernCppProject2025
 
-## Modern C++ Project
+# 3D Probabilistic Occupancy Grid Mapping (Log-Odds Formulation)
 
-This repository contains and a modern C++ projec that builds a 3D occupancy grid map from LiDAR point clouds using a 3D Bresenham ray casting algorithm and visualizes results with Open3D.
+## Overview
+This implementation maintains a **3D occupancy grid** from LiDAR point clouds using a 3D Bresenham ray casting algorithm in which each voxel stores the belief that it is occupied, based on sensor observations.  
+We use the **log-odds** representation for probabilities, which allows incremental Bayesian updates and avoids numerical instability.
+
+Typical applications:
+- 3D SLAM
+- Environment mapping for robotics
+- Obstacle detection for path planning
+
+---
 
 
 ### Features
 
 - Loads a sequence of point clouds (`.ply`) and corresponding 4x4 poses.
 - Transforms points to world frame and casts rays per point using a 3D Bresenham algorithm.
-- Builds a voxel occupancy map and visualizes occupied voxels via Open3D.
+- Builds a voxel occupancy map with probabilistic updates (log-odds) and visualizes voxels exceeding a chosen occupancy probability threshold via Open3D.
 
-### Requirements
+---
 
-- C++ compiler with C++20 support (Apple Clang on macOS works)
+<!-- ### Requirements
+
+- C++ compiler with ≥ C++17 support 
 - CMake ≥ 3.31
 - Eigen (headers only)
 - Open3D C++ library
@@ -61,8 +72,6 @@ Place your dataset under `project/data/`:
 - `project/data/PLY/` — a directory containing ordered `.ply` point clouds
 - `project/data/gt_poses.txt` — poses, one per scan, each line is a 3x4 row-major matrix (the last row is assumed to be `[0 0 0 1]`)
 
-By default, the path is hard-coded in `project/src/main.cpp`:
-
 ```cpp
 const std::string dataset_dir = "<project_root>/data/";
 ```
@@ -86,13 +95,15 @@ cmake --build <build_dir> -j
 <build_dir>/occupancy_mapper
 ```
 
-The program prints per-scan timings and opens an Open3D visualization window of the occupied voxels at the end.
+The program prints per-scan timings and opens an Open3D visualization window of occupied voxels (filtered by probability threshold) at the end.
 
-### Tuning and notes
+--- -->
 
-- Voxel size is set in `project/src/main.cpp` (`float VoxelSize = 0.8;`). Smaller voxels increase detail and runtime/memory.
-- The implementation inserts all free voxels along each ray and marks the last voxel as occupied. Free voxels never overwrite previously marked occupied voxels.
-- Parallel STL is not enabled on macOS’s libc++; the code currently uses STL algorithm `std::for_each` for portability.
+### Key Concepts and notes
+
+- **voxel size**: set in `project/src/main.cpp` (`float VoxelSize = 0.3;`). Smaller voxels increase detail and runtime/memory.
+- **probabilistic updates (log-odds)**: each traversed (intermediate) voxel receives a "free" update and the terminal voxel receives an "occupied" update. Updates are applied in log-odds and clamped for stability.
+- **visualization threshold**: set in `project/src/main.cpp` via `float occupancy_probability = 0.9;`. Only voxels with probability ≥ this threshold are rendered.
 
 ### How the algorithm works
 
@@ -101,35 +112,50 @@ The program prints per-scan timings and opens an Open3D visualization window of 
   - For each point `p_s` in the scan: transform to world `p_w = (T_w_s · [p_s;1]).head<3>()` and cast a ray from the sensor origin `o_w = T_w_s.translation()` to `p_w`.
 
 - **Voxelization**
-  - Convert any world point `p = (x,y,z)` to a discrete voxel index using the voxel size `v`: `i = ⌊x/v⌋`, `j = ⌊y/v⌋`, `k = ⌊z/v⌋`.
-  - The geometric center of a voxel `(i,j,k)` is `( (i+0.5)v, (j+0.5)v, (k+0.5)v )`.
+  - Convert any world point $p = (x, y, z)$ to a discrete voxel index using the voxel size $v$: $i = \left\lfloor \frac{x}{v} \right\rfloor$, $j = \left\lfloor \frac{y}{v} \right\rfloor$, $k = \left\lfloor \frac{z}{v} \right\rfloor$.
+  - The geometric center of a voxel $(i, j, k)$ is $\left( (i+0.5)v,\, (j+0.5)v,\, (k+0.5)v \right)$.
 
 - **3D Bresenham ray stepping** (integer arithmetic, no floating-point drift)
-  - Given start voxel `(x1,y1,z1)` and end voxel `(x2,y2,z2)`, compute deltas `dx, dy, dz` and step directions `xs, ys, zs ∈ {−1, +1}`.
-  - Choose the driving axis as the largest of `dx, dy, dz` and maintain two error terms (`p1`, `p2`) to decide when to step along the other axes.
-  - Visit each intermediate voxel along the grid line from start to end; these are considered free space.
-  - Mark the final voxel containing the hit point as occupied.
+  - Given start voxel $(x_1, y_1, z_1)$ and end voxel $(x_2, y_2, z_2)$, compute deltas $dx,\, dy,\, dz$ and step directions $x_{\text{inc}},\, y_{\text{inc}},\, z_{\text{inc}} \in \{-1, +1\}$.
+  - Choose the driving axis as the largest of $dx,\, dy,\, dz$ and maintain two error terms to decide when to step along the other axes.
+  - Visit each intermediate voxel along the grid line from start to end and apply a "free" probabilistic update; apply an "occupied" update at the final voxel.
 
-- **Occupancy update policy**
-  - The map is an `unordered_map<VoxelKey,bool>` hashed via large prime multipliers.
-  - Intermediate (free) voxels are inserted with `emplace(key,false)`, which does not overwrite existing values — so once a voxel is marked occupied, a later free insertion leaves it occupied.
-  - The end voxel is set with assignment `map[key_end] = true` to ensure occupancy.
+- **Occupancy representation and updates (probabilistic)**
+  - The map is an `unordered_map<VoxelKey,double>` storing log-odds values, hashed via large prime multipliers.
+  - Define $\operatorname{logit}(p) = \ln\left(\frac{p}{1-p}\right)$ and probability from log-odds as $p = 1 - \frac{1}{1 + \exp(l)}$.
+  <!-- - Per update: $l_{\text{voxel}} \leftarrow l_{\text{voxel}} + \Delta$, where $\Delta_{\text{free}} = \operatorname{logit}(P_{\text{FREE}}) - \operatorname{logit}(0.5)$ for intermediate voxels and $\Delta_{\text{occ}} = \operatorname{logit}(P_{\text{OCCUPIED}}) - \operatorname{logit}(0.5)$ for terminal voxels. 
+   -->
+  -**Bayesian Update Rule:**
+  Given:
+  Let:
+  - $p(z_t)$: Probability of occupancy from the **sensor model** for the current measurement
+  - $p_{\text{prior}}$: Prior probability before any measurements (often $0.5$, representing "unknown")
 
-- **Complexity**
-  - Per point: `O(L)` where `L ≈ max(dx,dy,dz)` voxels traversed; the algorithm is cache-friendly and branch-light.
-  - Memory: proportional to the number of unique voxels visited across all rays.
+  The **log-odds update** formula is:
+  $
+  L_t = L_{t-1} + \left[ \log\left(\frac{p(z_t)}{1 - p(z_t)}\right) - \log\left(\frac{p_{\text{prior}}}{1 - p_{\text{prior}}}\right) \right]
+  $
 
+  Where:
+  - $L_t$: Updated log-odds after observation
+  - $L_{t-1}$: Previous log-odds
+
+    We **subtract** $L(p_{\text{prior}})$ to ensure the update is **relative to the prior belief**, not an absolute overwrite.
+  - After each update, the resulting probability is clamped to $[P_{\text{MIN}},\, P_{\text{MAX}}]$ for numerical stability.
+<!-- 
 - **Why hashing instead of dense grids?**
   - A sparse hash map avoids allocating a large 3D array when the traversed space is small relative to the bounds.
-  - The chosen hash (`x*73856093 ⊕ y*19349663 ⊕ z*83492791`) distributes indices well for typical voxel coordinates.
+  - The chosen hash $(x \times 73856093) \oplus (y \times 19349663) \oplus (z \times 83492791)$ distributes indices well for typical voxel coordinates. -->
 
 - **Visualization**
-  - Extract centers of voxels with `true` occupancy and render with Open3D (`DrawGeometries`).
+  - Extract centers of voxels whose probability ≥ `occ_threshold` and render with Open3D (`DrawGeometries`). The threshold is set in `project/src/main.cpp`.
 
-### Troubleshooting
+---
 
-- Open3D not found: pass the correct `-DOpen3D_DIR=...` to CMake or install Open3D into `project/dependancies/open3d-install` as shown above.
-- Eigen headers not found: ensure `project/dependancies/eigen-master` exists or adjust include paths in `project/CMakeLists.txt` to your system Eigen.
-- No `.ply` files detected: ensure they are inside `project/data/PLY/` and have the `.ply` extension.
+### Refrences
 
-
+1. Wurm, Kai & Hornung, A & Bennewitz, Maren & Stachniss, Cyrill & Burgard, Wolfram. (2010). OctoMap: A Probabilistic, Flexible, and Compact 3D Map Representation for Robotic Systems. 2. 
+2. Souza, Anderson & Maia, Rosiery & Aroca, Rafael & Gonçalves, Luiz. (2013). Probabilistic robotic grid mapping based on occupancy and elevation information. 2013 16th International Conference on Advanced Robotics, ICAR 2013. 10.1109/ICAR.2013.6766467. 
+3. [OctoMap](https://github.com/OctoMap/octomap )—  C++ implementation for 3D log-odds mapping.
+4. [Bresenham's Algorithm for 3-D Line Drawing](https://www.geeksforgeeks.org/python/bresenhams-algorithm-for-3-d-line-drawing/)
+5. [C++ Bresenham 3d Line Drawing Algorithm](https://gist.github.com/yamamushi/5823518)
