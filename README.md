@@ -1,5 +1,3 @@
-# ModernCppProject2025
-
 # 3D Probabilistic Occupancy Grid Mapping (Log-Odds Formulation)
 
 ## Overview
