@@ -130,9 +130,7 @@ The program prints per-scan timings and opens an Open3D visualization window of 
   - $p_{\text{prior}}$: Prior probability before any measurements (often $0.5$, representing "unknown")
 
   The **log-odds update** formula is:
-  $$
-  L_t = L_{t-1} + L_{t} - L_{Prior}
-  $$
+  $$L_t = L_{t-1} + L_{t} - L_{Prior}$$
 
   Where:
   - $L_t$: Updated log-odds after observation
