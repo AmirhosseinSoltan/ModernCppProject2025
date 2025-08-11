@@ -110,7 +110,9 @@ The program prints per-scan timings and opens an Open3D visualization window of 
   - For each point `p_s` in the scan: transform to world `p_w = (T_w_s · [p_s;1]).head<3>()` and cast a ray from the sensor origin `o_w = T_w_s.translation()` to `p_w`.
 
 - **Voxelization**
-  - Convert any world point $p = (x, y, z)$ to a discrete voxel index using the voxel size $v$: $i = \left\lfloor \frac{x}{v} \right\rfloor$, $j = \left\lfloor \frac{y}{v} \right\rfloor$, $k = \left\lfloor \frac{z}{v} \right\rfloor$.
+  - Convert any world point $p = (x, y, z)$ to a discrete voxel index using the voxel size $v$:
+  
+   $i = \left\lfloor \frac{x}{v} \right\rfloor$, $j = \left\lfloor \frac{y}{v} \right\rfloor$, $k = \left\lfloor \frac{z}{v} \right\rfloor$.
   - The geometric center of a voxel $(i, j, k)$ is $\left( (i+0.5)v,\, (j+0.5)v,\, (k+0.5)v \right)$.
 
 - **3D Bresenham ray stepping** (integer arithmetic, no floating-point drift)
