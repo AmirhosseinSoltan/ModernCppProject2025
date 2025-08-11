@@ -31,11 +31,12 @@ int main() {
     size_t scans_processed = 0;  // std::size_t an alias for unsigned long or unsigned long long
     double accumulated_scan_s = 0.0;
 
-    float VoxelSize = 0.8;
+    float VoxelSize = 0.3;
 
     OccupancyGrid3D grid(VoxelSize);
 
     int num_scans = dataset.size();
+    // int num_scans = 300;
     for (size_t i = 0; i < num_scans; ++i){
         const auto& [pose, cloud_sensor] = dataset[i];
 
@@ -73,9 +74,10 @@ int main() {
     cout << "--------------------------------" << endl;
 
     // Get the final occupied points after processing all rays
-    auto occupied_points = grid.getOccupiedPoints();
+    float occupancy_probability = 0.9;
+    auto occupied_points = grid.getOccupiedPoints(occupancy_probability);
     cout << "Final Occupied Voxels: " << occupied_points.size() << endl;
-    
+	cout << "Voxel Size " << VoxelSize << endl;
     cout << "Visualizing final Occupied Voxels..." << endl;
     visualize(occupied_points, string("Occupied Voxels"));
 
