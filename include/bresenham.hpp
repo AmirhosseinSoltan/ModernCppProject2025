@@ -21,7 +21,6 @@ using Vector3d = Eigen::Vector3d;
 //     }
 //   };
 
-
 struct VoxelKey {
     int x;
     int y;
@@ -34,7 +33,7 @@ struct VoxelKey {
 //prime multiplier hashing.
 struct VoxelHash {
     size_t operator()(const VoxelKey& k) const noexcept {
-        // Large prime multipliers for good distribution
+        // Large prime multipliers for 
         return (static_cast<size_t>(k.x) * 73856093) ^
                (static_cast<size_t>(k.y) * 19349663) ^
                (static_cast<size_t>(k.z) * 83492791);
@@ -57,7 +56,7 @@ class OccupancyGrid3D {
 
         OccupancyGrid3D(double voxel_size) : voxel_size_(voxel_size) {}
         void insertRay(const Vector3d& start, const Vector3d& end);
-        Vector3dVector getOccupiedPoints() const;
+        Vector3dVector getOccupiedPoints(double occ_threshold) const;
 
     
     private:
@@ -75,6 +74,11 @@ class OccupancyGrid3D {
             };
         }
 
-        std::unordered_map<VoxelKey, bool, VoxelHash> occupancy_map_;
+        // std::unordered_map<VoxelKey, bool, VoxelHash> occupancy_map_;
+        
+        // Occupancy stored as log-odds values
+        std::unordered_map<VoxelKey, double, VoxelHash> occupancy_map_;
+
+        void updateVoxelProbability(const VoxelKey& key, double log_odds_update);
 
     };
