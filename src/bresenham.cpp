@@ -5,104 +5,120 @@
 #include "bresenham.hpp"
 
 using namespace std;
-using Key = tuple<int,int,int>;
+// using Key = tuple<int,int,int>;
 using Vector3dVector = vector<Eigen::Vector3d>;
 using Vector3d = Eigen::Vector3d;
 
-// Returns occupied voxel centers for visualization
-Vector3dVector OccupancyGrid3D::getOccupiedPoints() const 
-{
-	Vector3dVector pts;
-	pts.reserve(occupancy_map_.size());
-	for (const auto& [key,status] : occupancy_map_) {
-		if (status) {
-			pts.emplace_back(
-				(key.x + 0.5) * voxel_size_,
-				(key.y + 0.5) * voxel_size_,
-				(key.z + 0.5) * voxel_size_);
-		}
-	}
-	cout << "Total voxels in map: " << occupancy_map_.size() << endl;
-	cout << "Occupied voxels: " << pts.size() << endl;
-	return pts;
+
+// Parameters for occupancy probability update
+constexpr double P_OCCUPIED = 0.7; // Probability for an occupied voxel
+constexpr double P_FREE     = 0.2; // Probability for a free voxel
+constexpr double P_MIN      = 0.12; // Lower bound (to avoid going to 0) for numerical stability and avoid going to -+inf
+constexpr double P_MAX      = 0.97; // Upper bound (to avoid going to 1)
+
+// probability --->  log-odds
+static inline double probToLogOdds(double p) {
+    return std::log(p / (1.0 - p));
 }
 
+// log-odds --> probability
+static inline double logOddsToProb(double l) {
+    return 1.0 - (1.0 / (1.0 + std::exp(l)));
+}
+
+// Updates the voxel's occupancy log-odds in the map
+void OccupancyGrid3D::updateVoxelProbability(const VoxelKey& key, double log_odds_update) {
+    double& log_odds = occupancy_map_[key]; 
+    log_odds += log_odds_update;
+
+    // Clamping the probability range
+    double prob = logOddsToProb(log_odds);
+    if (prob >= P_MAX) {log_odds = probToLogOdds(P_MAX);}
+    else if (prob < P_MIN) {log_odds = probToLogOdds(P_MIN);}
+}
 
 void OccupancyGrid3D::insertRay(const Vector3d& start, const Vector3d& end) {
-
     auto s = toVoxelKey(start);
     auto e = toVoxelKey(end);
 
-	int x1 = s.x, y1 = s.y, z1 = s.z;
-	int x2 = e.x, y2 = e.y, z2 = e.z;
-	// Distances along each axis
-	int dx = abs(x2 - x1);
-	int dy = abs(y2 - y1);
-	int dz = abs(z2 - z1);
-	// Step variables or direction indicators for each axis
-	int xs = (x2 > x1) ? 1 : -1;
-	int ys = (y2 > y1) ? 1 : -1;
-	int zs = (z2 > z1) ? 1 : -1;
+    int x = s.x, y = s.y, z = s.z;
+    int x2 = e.x, y2 = e.y, z2 = e.z;
 
-    // Temporary vector for storing free voxels
-    Vector3dVector free_voxels;
-    free_voxels.reserve(max({dx, dy, dz}) + 1);
+	int dx = abs(x2 - x);
+	int dy = abs(y2 - y);
+	int dz = abs(z2 - z);
 
+    int x_inc = (x2 > x) ? 1 : -1;
+    int y_inc = (y2 > y) ? 1 : -1;
+    int z_inc = (z2 > z) ? 1 : -1;
+
+    int err_1, err_2;
+
+    double log_free = probToLogOdds(P_FREE) - probToLogOdds(0.5);
+    double log_occ  = probToLogOdds(P_OCCUPIED) - probToLogOdds(0.5);
+
+    // Traverse and mark free voxels (probabilistically)
     // Driving axis X
     if (dx >= dy && dx >= dz) {
-        int p1 = 2 * dy - dx; // error terms that decide when to step in the other two axes? needed to stay close to the true line.
-        int p2 = 2 * dz - dx;
-        while (x1 != x2) {
-            free_voxels.emplace_back( // marking all intermediate voxels free 
-                (x1 + 0.5) * voxel_size_,
-                (y1 + 0.5) * voxel_size_,
-                (z1 + 0.5) * voxel_size_);
-            x1 += xs;
-            if (p1 >= 0) { y1 += ys; p1 -= 2 * dx; }
-            if (p2 >= 0) { z1 += zs; p2 -= 2 * dx; }
-            p1 += 2 * dy;
-            p2 += 2 * dz;
+        err_1 = 2 * dy - dx; // error terms decide when to step in the other two axes? needed to stay close to the true line.
+        err_2 = 2 * dz - dx;
+
+        while (x != x2){
+            updateVoxelProbability(VoxelKey{x, y, z}, log_free);
+            if (err_1 > 0) { y += y_inc; err_1 -= 2 * dx; }
+            if (err_2 > 0) { z += z_inc; err_2 -= 2 * dx; }
+            err_1 += 2 * dy;
+            err_2 += 2 * dz;
+            x += x_inc;
         }
-    }
     // Driving axis Y
-    else if (dy >= dx && dy >= dz) {
-        int p1 = 2 * dx - dy;
-        int p2 = 2 * dz - dy;
-        while (y1 != y2) {
-            free_voxels.emplace_back(
-                (x1 + 0.5) * voxel_size_,
-                (y1 + 0.5) * voxel_size_,
-                (z1 + 0.5) * voxel_size_);
-            y1 += ys;
-            if (p1 >= 0) { x1 += xs; p1 -= 2 * dy; }
-            if (p2 >= 0) { z1 += zs; p2 -= 2 * dy; }
-            p1 += 2 * dx;
-            p2 += 2 * dz;
+    } else if ((dy >= dx) && (dy >= dz)) {
+        err_1 = 2 * dx - dy;
+        err_2 = 2 * dz - dy;
+
+        while ( y != y2){
+            updateVoxelProbability(VoxelKey{x, y, z}, log_free);
+            if (err_1 > 0) { x += x_inc; err_1 -= 2 * dy; }
+            if (err_2 > 0) { z += z_inc; err_2 -= 2 * dy; }
+            err_1 += 2 * dx;
+            err_2 += 2 * dz;
+            y += y_inc;
         }
-    }
     // Driving axis Z
-    else {
-        int p1 = 2 * dy - dz;
-        int p2 = 2 * dx - dz;
-        while (z1 != z2) {
-            free_voxels.emplace_back(
-                (x1 + 0.5) * voxel_size_,
-                (y1 + 0.5) * voxel_size_,
-                (z1 + 0.5) * voxel_size_);
-            z1 += zs;
-            if (p1 >= 0) { y1 += ys; p1 -= 2 * dz; }
-            if (p2 >= 0) { x1 += xs; p2 -= 2 * dz; }
-            p1 += 2 * dy;
-            p2 += 2 * dx;
+    } else {
+        err_1 = 2 * dy - dz;
+        err_2 = 2 * dx - dz;
+        while  (z != z2){
+            updateVoxelProbability(VoxelKey{x, y, z}, log_free);
+            if (err_1 > 0) { y += y_inc; err_1 -= 2 * dz; }
+            if (err_2 > 0) { x += x_inc; err_2 -= 2 * dz; }
+            err_1 += 2 * dy;
+            err_2 += 2 * dx;
+            z += z_inc;
         }
     }
 
-	// Bulk insert free voxels
-	for (const auto& v : free_voxels) {
-		occupancy_map_.emplace(toVoxelKey(v), false); //emplace means if a voxel previously marked occupied, it won’t be overwritten back to free.
-	}
+    // Mark last voxel as occupied (probabilistically)
+    updateVoxelProbability(VoxelKey{x2, y2, z2}, log_occ);
+}
 
-	// Mark last voxel as occupied 
-	occupancy_map_[VoxelKey{x2, y2, z2}] = true;
+Vector3dVector OccupancyGrid3D::getOccupiedPoints(double occ_threshold) const 
+{
+    Vector3dVector pts;
+    pts.reserve(occupancy_map_.size());
 
+    for (const auto& [key, log_odds] : occupancy_map_) {
+        double prob = logOddsToProb(log_odds);
+        if (prob >= occ_threshold) {
+            pts.emplace_back(
+                (key.x + 0.5) * voxel_size_,
+                (key.y + 0.5) * voxel_size_,
+                (key.z + 0.5) * voxel_size_);
+        }
+    }
+
+    std::cout << "Total voxels in map: " << occupancy_map_.size() << std::endl;
+    std::cout << "Occupied voxels (>" << occ_threshold << "): " << pts.size() << std::endl;
+
+    return pts;
 }
