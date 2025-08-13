@@ -11,10 +11,10 @@ using Vector3d = Eigen::Vector3d;
 
 
 // Parameters for occupancy probability update
-constexpr double P_OCCUPIED = 0.7; // Probability for an occupied voxel
+constexpr double P_OCCUPIED = 0.85; // Probability for an occupied voxel
 constexpr double P_FREE     = 0.2; // Probability for a free voxel
-constexpr double P_MIN      = 0.12; // Lower bound (to avoid going to 0) for numerical stability and avoid going to -+inf
-constexpr double P_MAX      = 0.97; // Upper bound (to avoid going to 1)
+constexpr double P_MIN      = 0.2; // Lower bound (to avoid going to 0) for numerical stability and avoid going to -+inf
+constexpr double P_MAX      = 0.95; // Upper bound (to avoid going to 1)
 
 // probability --->  log-odds
 static inline double probToLogOdds(double p) {
