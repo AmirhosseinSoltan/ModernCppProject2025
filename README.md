@@ -19,8 +19,8 @@ Typical applications:
 - Builds a voxel occupancy map with probabilistic updates (log-odds) and visualizes voxels exceeding a chosen occupancy probability threshold via Open3D.
 
 ---
-
-<!-- ### Requirements
+<!-- 
+### Requirements
 
 - C++ compiler with ≥ C++17 support 
 - CMake ≥ 3.31
@@ -61,7 +61,7 @@ cmake --build o3d_build -j
 cmake --install o3d_build
 ```
 
-If you use system Eigen instead of `dependancies/eigen-master`, update `project/CMakeLists.txt` to include your system Eigen path or add `-I` flags accordingly.
+If you use system Eigen instead of `dependancies/eigen-master`, update `project/CMakeLists.txt` to include your system Eigen path or add `-I` flags accordingly. -->
 
 ### Dataset layout
 
@@ -70,32 +70,32 @@ Place your dataset under `project/data/`:
 - `project/data/PLY/` — a directory containing ordered `.ply` point clouds
 - `project/data/gt_poses.txt` — poses, one per scan, each line is a 3x4 row-major matrix (the last row is assumed to be `[0 0 0 1]`)
 
-```cpp
-const std::string dataset_dir = "<project_root>/data/";
-```
 
 Update this string to point to your dataset location if your repo path differs.
 
-### Build
+### Quick Start - Build & Run
 
 ```bash
-# Configure (override Open3D_DIR if needed)
-cmake -S <project_root> -B <build_dir> \
-  -DOpen3D_DIR=<project_root>/dependancies/open3d-install/lib/cmake/Open3D
+# 1. Clone the repository
+git clone https://github.com/AmirhosseinSoltan/ModernCppProject2025.git
+cd ModernCppProject2025
 
-# Build
-cmake --build <build_dir> -j
-```
+# 2. Build the project
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
 
-### Run
+# 3. Pass the path to your dataset directory via command-line parameters as following:
+./build/occupancy_mapping --data-path <path_to_your_dataset> --voxel-size <requiered_voxel_size>
 
-```bash
-<build_dir>/occupancy_mapper
-```
+or 
 
-The program prints per-scan timings and opens an Open3D visualization window of occupied voxels (filtered by probability threshold) at the end.
+./build/occupancy_mapping --d <path_to_your_dataset> --s <requiered_voxel_size>
 
---- -->
+# Show all options
+./build/occupancy_mapping --help
+
+---
 
 ### Key Concepts and notes
 
