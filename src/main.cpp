@@ -7,6 +7,7 @@
 #include "bresenham.hpp"
 #include <chrono>
 #include <algorithm>
+#include <cxxopts.hpp>
 
 using namespace std;
 using clock_ = std::chrono::steady_clock;
@@ -15,10 +16,25 @@ using Vector3d = Eigen::Vector3d;
 using PoseAndCloud = pair<Eigen::Matrix4d,Vector3dVector>;
 
 
-int main() {
+int main(int argc, char **argv) {
+    
+    cxxopts::Options options("OccupancyMapper", "3D occupancy grid mapper");
+    options.add_options()
+    ("d,data-path", "Dataset directory", cxxopts::value<string>()->default_value("/Users/amir/Desktop/class/4th_Semester/ModernC++/project/data/"))
+    ("s,voxel-size", "Voxel Size", cxxopts::value<double>()->default_value("0.3"))
+    ("h,help", "Show help");
+
+    auto result = options.parse(argc, argv);
+
+    if (result.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
+
+    const string dataset_dir = result["data-path"].as<string>();
+    double VoxelSize = result["voxel-size"].as<double>();
 
     cout << "LOADING THE DATA ..." << endl;
-    const string dataset_dir = "/Users/amir/Desktop/class/4th_Semester/ModernC++/project/data/";
     dataloader::Dataset dataset(dataset_dir); 
     cout << "Dataset size: " << dataset.size() << endl;
     cout << "Finished loading the data." << endl;
@@ -30,8 +46,6 @@ int main() {
 
     size_t scans_processed = 0;  // std::size_t an alias for unsigned long or unsigned long long
     double accumulated_scan_s = 0.0;
-
-    float VoxelSize = 0.3;
 
     OccupancyGrid3D grid(VoxelSize);
 
