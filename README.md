@@ -94,7 +94,7 @@ or
 
 # Show all options
 ./build/occupancy_mapping --help
-
+```
 ---
 
 ### Key Concepts and notes
