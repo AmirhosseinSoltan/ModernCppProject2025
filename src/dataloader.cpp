@@ -1,7 +1,5 @@
 #include "dataloader.hpp"
-
 #include <open3d/Open3D.h>
-
 #include <Eigen/Core>
 #include <filesystem>
 #include <fstream>
