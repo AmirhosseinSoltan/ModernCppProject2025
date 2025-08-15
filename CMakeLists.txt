@@ -13,8 +13,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Enable folders in IDEs like VS Code 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-find_package(Open3D REQUIRED
-    HINTS "${CMAKE_SOURCE_DIR}/dependancies/open3d-install/lib/cmake/Open3D")
+find_package(Open3D REQUIRED HINTS "${CMAKE_SOURCE_DIR}/dependancies/open3d-install/lib/cmake/Open3D")
 find_package(cxxopts REQUIRED)
 find_package(Eigen3 REQUIRED)
 
