@@ -112,11 +112,9 @@ or
 - **Voxelization**
   - Convert any world point $p = (x, y, z)$ to a discrete voxel index using the voxel size $v$:
   
-   $$
-   i = \left\lfloor \frac{x}{v} \right\rfloor,\quad
+   $$i = \left\lfloor \frac{x}{v} \right\rfloor,\quad
    j = \left\lfloor \frac{y}{v} \right\rfloor,\quad
-   k = \left\lfloor \frac{z}{v} \right\rfloor
-   $$
+   k = \left\lfloor \frac{z}{v} \right\rfloor$$
    
   - The geometric center of a voxel $(i, j, k)$ is $$\left( (i+0.5)v,\, (j+0.5)v,\, (k+0.5)v \right)$$.
   - **NOTE** `Voxel size` can significantly affect the processing time and computational cost. The smaller the voxel size, the larger the number of rays needed to be cast and therefore, the more the computation.
