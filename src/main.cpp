@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     auto result = options.parse(argc, argv);
 
     if (result.count("help")) {
-        std::cout << options.help() << std::endl;
+        cout << options.help() << endl;
         return 0;
     }
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
         const auto scan_start = clock_::now();
 
-        Vector3d origin = pose.block<3,1>(0,3); // capturing the translation vector as the origin point
+        Vector3d origin = pose.block<3,1>(0,3); // translation vector as the origin point
 
         auto transform_and_cast = [&](const Vector3d& point_s) {
             Eigen::Vector4d hom(point_s.x(), point_s.y(), point_s.z(), 1.0);
@@ -63,13 +63,13 @@ int main(int argc, char **argv) {
         };
 
         // Note: we could use std::execution::par here to run in parallel. But macOS libc++ doesn't support 
-        std::for_each(cloud_sensor.begin(), cloud_sensor.end(), transform_and_cast);
+        for_each(cloud_sensor.begin(), cloud_sensor.end(), transform_and_cast);
 
         const auto scan_end = clock_::now();
 
         const double scan_s = chrono::duration<double>(scan_end - scan_start).count();
 
-        std::cout << " Scan " << (i + 1) << "/" << num_scans << "   |  " << scan_s << " s " << std::endl;
+        cout << " Scan " << (i + 1) << "/" << num_scans << "   |  " << scan_s << " s " << endl;
 
         accumulated_scan_s += scan_s;
         ++scans_processed;
