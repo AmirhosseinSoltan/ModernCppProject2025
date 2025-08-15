@@ -14,7 +14,7 @@ Typical applications:
 ### Project Demo
 
 <p align="center">
-  <img src="output.gif" alt="Occupancy Mapper Demo" width="600"/>
+  <img src="output.gif" alt="Occupancy Mapper Demo" width="800"/>
 </p>
 
 --- 
