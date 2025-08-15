@@ -5,7 +5,6 @@
 #include "bresenham.hpp"
 
 using namespace std;
-// using Key = tuple<int,int,int>;
 using Vector3dVector = vector<Eigen::Vector3d>;
 using Vector3d = Eigen::Vector3d;
 
@@ -13,17 +12,17 @@ using Vector3d = Eigen::Vector3d;
 // Parameters for occupancy probability update
 constexpr double P_OCCUPIED = 0.85; // Probability for an occupied voxel
 constexpr double P_FREE     = 0.2; // Probability for a free voxel
-constexpr double P_MIN      = 0.2; // Lower bound (to avoid going to 0) for numerical stability and avoid going to -+inf
+constexpr double P_MIN      = 0.2; // Lower bound (to avoid going to 0) for numerical stability
 constexpr double P_MAX      = 0.95; // Upper bound (to avoid going to 1)
 
 // probability --->  log-odds
 static inline double probToLogOdds(double p) {
-    return std::log(p / (1.0 - p));
+    return log(p / (1.0 - p));
 }
 
 // log-odds --> probability
 static inline double logOddsToProb(double l) {
-    return 1.0 - (1.0 / (1.0 + std::exp(l)));
+    return 1.0 - (1.0 / (1.0 + exp(l)));
 }
 
 // Updates the voxel's occupancy log-odds in the map
@@ -60,7 +59,7 @@ void OccupancyGrid3D::insertRay(const Vector3d& start, const Vector3d& end) {
     // Traverse and mark free voxels (probabilistically)
     // Driving axis X
     if (dx >= dy && dx >= dz) {
-        err_1 = 2 * dy - dx; // error terms decide when to step in the other two axes? needed to stay close to the true line.
+        err_1 = 2 * dy - dx; 
         err_2 = 2 * dz - dx;
 
         while (x != x2){
@@ -117,8 +116,8 @@ Vector3dVector OccupancyGrid3D::getOccupiedPoints(double occ_threshold) const
         }
     }
 
-    std::cout << "Total voxels in map: " << occupancy_map_.size() << std::endl;
-    std::cout << "Occupied voxels (>" << occ_threshold << "): " << pts.size() << std::endl;
+    cout << "Total voxels in map: " << occupancy_map_.size() << endl;
+    cout << "Occupied voxels (>" << occ_threshold << "): " << pts.size() << endl;
 
     return pts;
 }
