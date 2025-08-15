@@ -1,8 +1,6 @@
 #include <Eigen/Dense>
-#include <open3d/Open3D.h>
 #include <iostream>
 #include "dataloader.hpp"
-// #include "transformer.hpp"
 #include "visualizer.hpp"
 #include "bresenham.hpp"
 #include <chrono>
