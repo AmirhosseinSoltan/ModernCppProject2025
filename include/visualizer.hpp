@@ -16,11 +16,7 @@ inline void visualize(
     for (size_t i = 0; i < pointcloud.size(); i++) {
         const auto& pt = pointcloud[i];
         pcd->points_.emplace_back(pt.x(), pt.y(), pt.z());
-    }
-    
-    // Add bright red color to make points more visible
-//     pcd->colors_.resize(pcd->points_.size(), Eigen::Vector3d(1.0, 0.0, 0.0));
-    
+    } 
 
     open3d::visualization::DrawGeometries({pcd}, name, 1600, 1024);
 }

@@ -16,14 +16,14 @@ struct VoxelKey {
     int y;
     int z;
 
-    bool operator==(const VoxelKey& other) const noexcept { //container needs to check whether two keys that land in the same bucket are actually the same. 
+    bool operator==(const VoxelKey& other) const noexcept { 
         return x == other.x && y == other.y && z == other.z;
     }
 };
 
-//prime multiplier hashing.a way to store (x, y, z) directly inside one integer multiplying by primes
+//prime multiplier hashing. 
 struct VoxelHash {
-    size_t operator()(const VoxelKey& k) const noexcept {
+    size_t operator()(const VoxelKey& k) const noexcept { //overloading operator(),
         // Large prime multipliers for 
         return (static_cast<size_t>(k.x) * 73856093) ^
                (static_cast<size_t>(k.y) * 19349669) ^
@@ -43,14 +43,14 @@ class OccupancyGrid3D {
 
         inline VoxelKey toVoxelKey(const Vector3d& pt) const {
             return {
-                static_cast<int>(std::floor(pt.x() / voxel_size_)),
-                static_cast<int>(std::floor(pt.y() / voxel_size_)),
-                static_cast<int>(std::floor(pt.z() / voxel_size_))
+                static_cast<int>(floor(pt.x() / voxel_size_)),
+                static_cast<int>(floor(pt.y() / voxel_size_)),
+                static_cast<int>(floor(pt.z() / voxel_size_))
             };
         }
 
-        // Occupancy stored as : { log-odds values
-        std::unordered_map<VoxelKey, double, VoxelHash> occupancy_map_;
+        // Occupancy stored as : { key : log-odds values }
+        unordered_map<VoxelKey, double, VoxelHash> occupancy_map_;
 
         void updateVoxelProbability(const VoxelKey& key, double log_odds_update);
 
