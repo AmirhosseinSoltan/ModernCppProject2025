@@ -1,8 +1,8 @@
-# 3D Probabilistic Occupancy Grid Mapping (Log-Odds Formulation)
+# 3D Probabilistic Occupancy Grid Mapping
 
 ## Overview
 This implementation maintains a **3D occupancy grid** from LiDAR point clouds using a 3D Bresenham ray casting algorithm in which each voxel stores the belief that it is occupied, based on sensor observations.  
-We use the **log-odds** representation for probabilities, which allows incremental Bayesian updates and avoids numerical instability.
+We use the **log-odds** representation for probabilities, which allows incremental Bayesian updates and avoids numerical instability.  This project integrates the Open3D library for visualization and cxxopts for command-line options.
 
 Typical applications:
 - 3D SLAM
@@ -11,69 +11,59 @@ Typical applications:
 
 ---
 
+### Project Demo
+
+<img src="output.gif" alt="Occupancy Mapper Demo" width="600"/>
+
+
+--- 
+
+### Project Structure
+```
+ModernCppProject2025/
+├── CMakeLists.txt
+├── src/
+│   ├── main.cpp
+│   ├── dataloader.cpp
+│   ├── bresenham.cpp
+│   └── visualizer.cpp
+├── include/
+│   ├── dataloader.hpp
+│   ├── bresenham.hpp
+│   ├── visualizer.hpp
+│   └── occupancy_grid.hpp
+├── data/        
+│   ├── PLY/*.ply
+│   ├── gt_poses.txt       
+└── README.md
+```
+---
 
 ### Features
-
-- Loads a sequence of point clouds (`.ply`) and corresponding 4x4 poses.
-- Transforms points to world frame and casts rays per point using a 3D Bresenham algorithm.
-- Builds a voxel occupancy map with probabilistic updates (log-odds) and visualizes voxels exceeding a chosen occupancy probability threshold via Open3D.
+- 3D occupancy mapping via Bresenham voxel traversal.
+- Uses Eigen for matrix transformations and vector operations.
+- Supports dataset loading through a modular dataloader.
+- Interactive visualization of final occupied voxels using Open3D.
+- Configurable via command-line arguments for flexible experimentation.
+- Time performance metrics: per-scan and total processing time reporting.
 
 ---
-<!-- 
-### Requirements
 
-- C++ compiler with ≥ C++17 support 
-- CMake ≥ 3.31
-- Eigen (headers only)
-- Open3D C++ library
+## Getting Started
+### Prerequisites
+Ensure the following dependencies are installed:
 
-The project’s `CMakeLists.txt` expects:
+1. CMake (minimum version 3.31)
 
-- Eigen headers at `project/dependancies/eigen-master`
-- Open3D CMake config at `project/dependancies/open3d-install/lib/cmake/Open3D`
+2. C++20-capable compiler (e.g., GCC ≥ 10, Clang ≥ 11)
 
-You can override the Open3D path at configure time with `-DOpen3D_DIR=...`.
-
-### Get the dependencies
-
-Place dependencies under `project/dependancies/` (default expected by CMake):
-
-1) Eigen (headers only)
-
-```bash
-git clone --depth=1 https://gitlab.com/libeigen/eigen.git <project_root>/dependancies/eigen-master
-```
-
-2) Open3D (build and install locally)
-
-```bash
-# Choose a working dir outside the repo root
-cd <work_dir>
-git clone --recursive https://github.com/isl-org/Open3D.git
-cmake -S Open3D -B o3d_build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_SHARED_LIBS=ON \
-  -DBUILD_GUI=ON \
-  -DBUILD_EXAMPLES=OFF \
-  -DBUILD_PYTHON_MODULE=OFF \
-  -DCMAKE_INSTALL_PREFIX=<project_root>/dependancies/open3d-install
-cmake --build o3d_build -j
-cmake --install o3d_build
-```
-
-If you use system Eigen instead of `dependancies/eigen-master`, update `project/CMakeLists.txt` to include your system Eigen path or add `-I` flags accordingly. -->
-
-### Dataset layout
-
-Place your dataset under `project/data/`:
-
-- `project/data/PLY/` — a directory containing ordered `.ply` point clouds
-- `project/data/gt_poses.txt` — poses, one per scan, each line is a 3x4 row-major matrix (the last row is assumed to be `[0 0 0 1]`)
+3. Eigen3, Open3D, and cxxopts (via package manager or built from source)
 
 
-Update this string to point to your dataset location if your repo path differs.
 
-### Quick Start - Build & Run
+### Build & Run
+
+The project uses CMake for its build system.
 
 ```bash
 # 1. Clone the repository
@@ -86,39 +76,65 @@ cmake ..
 make -j$(nproc)
 
 # 3. Pass the path to your dataset directory via command-line parameters as following:
-./build/occupancy_mapping --data-path <path_to_your_dataset> --voxel-size <requiered_voxel_size>
+./occupancy_mapping --data-path <path_to_your_dataset> --voxel-size <requiered_voxel_size>
 
 or 
 
-./build/occupancy_mapping --d <path_to_your_dataset> --s <requiered_voxel_size>
+./occupancy_mapping --d <path_to_your_dataset> --s <requiered_voxel_size>
 
 # Show all options
-./build/occupancy_mapping --help
+./occupancy_mapping --help
 ```
+
+### Usage example
+```
+./occupancy_mapper \
+  --data-path /path/to/your/dataset/ \
+  --voxel-size 0.8
+```
+
+### Available options
+| Option             | Description                            | Default Value                      |
+| ------------------ | -------------------------------------- | ---------------------------------- |
+| `-d, --data-path`  | Directory containing point cloud scans | `data/` (relative to project root) |
+| `-s, --voxel-size` | Size of each voxel in meters           | `0.3  `                              |
+| `-h, --help`       | Display help and usage instructions    | —                                  |
+
 ---
 
-### Key Concepts and notes
-
-- **voxel size**: set in `project/src/main.cpp` (`float VoxelSize = 0.3;`). Smaller voxels increase detail and runtime/memory.
-- **probabilistic updates (log-odds)**: each traversed (intermediate) voxel receives a "free" update and the terminal voxel receives an "occupied" update. Updates are applied in log-odds and clamped for stability.
-- **visualization threshold**: set in `project/src/main.cpp` via `float occupancy_probability = 0.9;`. Only voxels with probability ≥ this threshold are rendered.
-
-### How the algorithm works
+### How the algorithm works?
 
 - **Data flow**
-  - Load point cloud for scan i and its pose `T_w_s ∈ SE(3)` from `gt_poses.txt`.
-  - For each point `p_s` in the scan: transform to world `p_w = (T_w_s · [p_s;1]).head<3>()` and cast a ray from the sensor origin `o_w = T_w_s.translation()` to `p_w`.
+  - First we load a sequence of point clouds (`.ply` files) for each scan and corresponding 4x4 poses from `gt_poses.txt` file.
+  - For each point in the scan, the point is transformed to world coordinates.
 
 - **Voxelization**
   - Convert any world point $p = (x, y, z)$ to a discrete voxel index using the voxel size $v$:
   
-   $i = \left\lfloor \frac{x}{v} \right\rfloor$, $j = \left\lfloor \frac{y}{v} \right\rfloor$, $k = \left\lfloor \frac{z}{v} \right\rfloor$.
-  - The geometric center of a voxel $(i, j, k)$ is $\left( (i+0.5)v,\, (j+0.5)v,\, (k+0.5)v \right)$.
+   $$
+   i = \left\lfloor \frac{x}{v} \right\rfloor,\quad
+   j = \left\lfloor \frac{y}{v} \right\rfloor,\quad
+   k = \left\lfloor \frac{z}{v} \right\rfloor
+   $$
+   
+  - The geometric center of a voxel $(i, j, k)$ is $$\left( (i+0.5)v,\, (j+0.5)v,\, (k+0.5)v \right)$$.
+  - **NOTE** `Voxel size` can significantly affect the processing time and computational cost. The smaller the voxel size, the larger the number of rays needed to be cast and therefore, the more the computation.
 
-- **3D Bresenham ray stepping** (integer arithmetic, no floating-point drift)
+  - We obsereved the following results through our experiments on MacBook pro, Processor: 2.6 GHz 6-Core Intel Core i7, Memory: 16 GB 2400 MHz DDR4
+
+    | Average per-scan process time (Sec) | Total process tim(Min)  |   Voxel_size  |                  
+    | ------------------ | -------------------------------------- | ---------------------------------- |
+    | 0.600498 s  | 69.0438 |  0.3 | 
+    | 0.45834 s  | 56.2518 |  0.5 | 
+    | 0.328146 s  | 38.1198 |  0.8 | 
+    | 0.24417 s  | 28.7800 |  1.0 | 
+
+
+- **3D Bresenham ray stepping** 
+  - Cast a ray from the sensor origin to the point, `insertRay()` functionality.
   - Given start voxel $(x_1, y_1, z_1)$ and end voxel $(x_2, y_2, z_2)$, compute deltas $dx,\, dy,\, dz$ and step directions $x_{\text{inc}},\, y_{\text{inc}},\, z_{\text{inc}} \in \{-1, +1\}$.
   - Choose the driving axis as the largest of $dx,\, dy,\, dz$ and maintain two error terms to decide when to step along the other axes.
-  - Visit each intermediate voxel along the grid line from start to end and apply a "free" probabilistic update; apply an "occupied" update at the final voxel.
+  - Visit each intermediate voxel along the grid line from start to end and apply a "free" probabilistic update; apply an "occupied" update at the final voxel. Updates are applied in log-odds and clamped for stability.
 
 - **Occupancy representation and updates (probabilistic)**
   - The map is an `unordered_map<VoxelKey,double>` storing log-odds values, hashed via large prime multipliers.
@@ -146,7 +162,7 @@ or
   - The chosen hash $(x \times 73856093) \oplus (y \times 19349663) \oplus (z \times 83492791)$ distributes indices well for typical voxel coordinates. -->
 
 - **Visualization**
-  - Extract centers of voxels whose probability ≥ `occ_threshold` and render with Open3D (`DrawGeometries`). The threshold is set in `project/src/main.cpp`.
+  - Extract centers of voxels whose probability ≥ `occ_threshold` and render via Open3D (`DrawGeometries`).
 
 ---
 
