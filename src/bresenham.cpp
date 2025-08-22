@@ -15,15 +15,6 @@ constexpr double P_FREE     = 0.2; // Probability for a free voxel
 constexpr double P_MIN      = 0.2; // Lower bound (to avoid going to 0) for numerical stability
 constexpr double P_MAX      = 0.95; // Upper bound (to avoid going to 1)
 
-// probability --->  log-odds
-static inline double probToLogOdds(double p) {
-    return log(p / (1.0 - p));
-}
-
-// log-odds --> probability
-static inline double logOddsToProb(double l) {
-    return 1.0 - (1.0 / (1.0 + exp(l)));
-}
 
 // Updates the voxel's occupancy log-odds in the map
 void OccupancyGrid3D::updateVoxelProbability(const VoxelKey& key, double log_odds_update) {
