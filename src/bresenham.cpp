@@ -4,27 +4,33 @@
 #include <cmath>
 #include "bresenham.hpp"
 
-using namespace std;
-using Vector3dVector = vector<Eigen::Vector3d>;
+using std::cout;
+using std::endl;
+using std::abs;
 using Vector3d = Eigen::Vector3d;
+using Vector3dVector = std::vector<Vector3d>;
 
 
 // Parameters for occupancy probability update
-constexpr double P_OCCUPIED = 0.85; // Probability for an occupied voxel
-constexpr double P_FREE     = 0.2; // Probability for a free voxel
-constexpr double P_MIN      = 0.2; // Lower bound (to avoid going to 0) for numerical stability
-constexpr double P_MAX      = 0.95; // Upper bound (to avoid going to 1)
+constexpr double P_OCCUPIED     = 0.85; // Probability for an occupied voxel
+constexpr double P_FREE         = 0.2; // Probability for a free voxel
+constexpr double P_MIN          = 0.2; // Lower bound (to avoid going to 0) for numerical stability
+constexpr double P_MAX          = 0.95; // Upper bound (to avoid going to 1)
+double log_max                  = OccupancyGrid3D::probToLogOdds(P_MAX);
+double log_min                  = OccupancyGrid3D::probToLogOdds(P_MIN);
+double log_free                 = OccupancyGrid3D::probToLogOdds(P_FREE) - OccupancyGrid3D::probToLogOdds(0.5);
+double log_occ                  = OccupancyGrid3D::probToLogOdds(P_OCCUPIED) - OccupancyGrid3D::probToLogOdds(0.5);
 
 
 // Updates the voxel's occupancy log-odds in the map
-void OccupancyGrid3D::updateVoxelProbability(const VoxelKey& key, double log_odds_update) {
+void OccupancyGrid3D::updateVoxelProbability(const VoxelKey& key, double& log_odds_update) {
     double& log_odds = occupancy_map_[key]; 
     log_odds += log_odds_update;
 
     // Clamping the probability range
     double prob = logOddsToProb(log_odds);
-    if (prob >= P_MAX) {log_odds = probToLogOdds(P_MAX);}
-    else if (prob < P_MIN) {log_odds = probToLogOdds(P_MIN);}
+    if (prob >= P_MAX) {log_odds = log_max;}
+    else if (prob < P_MIN) {log_odds = log_min;}
 }
 
 void OccupancyGrid3D::insertRay(const Vector3d& start, const Vector3d& end) {
@@ -43,9 +49,6 @@ void OccupancyGrid3D::insertRay(const Vector3d& start, const Vector3d& end) {
     int z_inc = (z2 > z) ? 1 : -1;
 
     int err_1, err_2;
-
-    double log_free = probToLogOdds(P_FREE) - probToLogOdds(0.5);
-    double log_occ  = probToLogOdds(P_OCCUPIED) - probToLogOdds(0.5);
 
     // Traverse and mark free voxels (probabilistically)
     // Driving axis X
@@ -92,7 +95,7 @@ void OccupancyGrid3D::insertRay(const Vector3d& start, const Vector3d& end) {
     updateVoxelProbability(VoxelKey{x2, y2, z2}, log_occ);
 }
 
-Vector3dVector OccupancyGrid3D::getOccupiedPoints(double occ_threshold) const 
+Vector3dVector OccupancyGrid3D::getOccupiedPoints(const double& occ_threshold) 
 {
     Vector3dVector pts;
     pts.reserve(occupancy_map_.size());
