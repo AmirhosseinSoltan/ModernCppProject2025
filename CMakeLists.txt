@@ -27,14 +27,12 @@ target_link_libraries(dataloader PUBLIC
 add_library(bresenham)
 target_sources(bresenham PRIVATE src/bresenham.cpp)
 target_include_directories(bresenham PUBLIC include/)
-
 target_link_libraries(bresenham PUBLIC dataloader)
 
 
 add_executable(occupancy_mapper)
 target_sources(occupancy_mapper PRIVATE src/main.cpp)
 target_include_directories(occupancy_mapper PUBLIC include/)
-
 target_link_libraries(occupancy_mapper PRIVATE 
                                                 Eigen3::Eigen
                                                 cxxopts::cxxopts
