@@ -6,12 +6,17 @@
 #include <chrono>
 #include <algorithm>
 #include <cxxopts.hpp>
+#include <unistd.h>
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::string;
+using std::size_t;
+namespace chrono = std::chrono;
 using clock_ = std::chrono::steady_clock;
-using Vector3dVector = vector<Eigen::Vector3d>;
+using Vector3dVector = std::vector<Eigen::Vector3d>;
 using Vector3d = Eigen::Vector3d;
-using PoseAndCloud = pair<Eigen::Matrix4d,Vector3dVector>;
+using PoseAndCloud = std::pair<Eigen::Matrix4d,Vector3dVector>;
 
 
 int main(int argc, char **argv) {
@@ -30,7 +35,7 @@ int main(int argc, char **argv) {
     }
 
     const string dataset_dir = result["data-path"].as<string>();
-    double VoxelSize = result["voxel-size"].as<double>();
+    const double VoxelSize = result["voxel-size"].as<double>();
 
     cout << "LOADING THE DATA ..." << endl;
     dataloader::Dataset dataset(dataset_dir); 
@@ -86,7 +91,7 @@ int main(int argc, char **argv) {
     cout << "--------------------------------" << endl;
 
     // Get the final occupied points after processing all rays
-    float occupancy_probability = 0.9;
+    const float occupancy_probability = 0.9;
     auto occupied_points = grid.getOccupiedPoints(occupancy_probability);
     cout << "Final Occupied Voxels: " << occupied_points.size() << endl;
 	cout << "Voxel Size " << VoxelSize << endl;
